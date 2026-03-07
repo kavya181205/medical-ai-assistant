@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Medical AI Assistant</title>
+<link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+<div class="app">
+
+<!-- Sidebar -->
+<div class="sidebar">
+
+<button onclick="createNewChat()">+ New Chat</button>
+
+<div id="history"></div>
+
+</div>
+
+
+<!-- Chat Area -->
+<div class="chat">
+
+<div id="chatbox"></div>
+
+<div class="input-area">
+
+<input
+id="userInput"
+placeholder="Type your message..."
+autocomplete="off"
+/>
+
+<button onclick="sendMessage()">Send</button>
+
+</div>
+
+</div>
+
+</div>
+
+<script src="script.js"></script>
+
+</body>
+</html>

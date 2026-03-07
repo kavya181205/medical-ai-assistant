@@ -1,0 +1,183 @@
+let thread_id = null;
+
+
+// -----------------------------
+// Create new chat
+// -----------------------------
+async function createNewChat(){
+
+let res = await fetch("http://127.0.0.1:8000/new_chat",{
+method:"POST"
+})
+
+let data = await res.json()
+
+thread_id = data.thread_id
+
+document.getElementById("chatbox").innerHTML=""
+
+loadConversations()
+
+}
+
+
+// -----------------------------
+// Load conversation list
+// -----------------------------
+async function loadConversations(){
+
+let res = await fetch("http://127.0.0.1:8000/conversations")
+
+let chats = await res.json()
+
+let history = document.getElementById("history")
+
+history.innerHTML=""
+
+chats.forEach(chat=>{
+
+let div = document.createElement("div")
+
+div.innerText = chat.title
+
+div.className = "history-item"
+
+div.onclick = ()=>loadChat(chat.thread_id)
+
+history.appendChild(div)
+
+})
+
+}
+
+
+// -----------------------------
+// Load messages
+// -----------------------------
+async function loadChat(id){
+
+thread_id = id
+
+let res = await fetch("http://127.0.0.1:8000/messages/"+id)
+
+let messages = await res.json()
+
+let chatbox = document.getElementById("chatbox")
+
+chatbox.innerHTML=""
+
+messages.forEach(m=>{
+
+let div=document.createElement("div")
+
+div.className = m.role==="user" ? "user" : "bot"
+
+div.textContent = m.content
+
+chatbox.appendChild(div)
+
+})
+
+chatbox.scrollTop = chatbox.scrollHeight
+
+}
+
+
+// -----------------------------
+// Send message
+// -----------------------------
+async function sendMessage(){
+
+let input = document.getElementById("userInput")
+
+let msg = input.value.trim()
+
+if(!msg) return
+
+// create thread if missing
+if(!thread_id){
+await createNewChat()
+}
+
+let chatbox = document.getElementById("chatbox")
+
+// user bubble
+let userDiv=document.createElement("div")
+userDiv.className="user"
+userDiv.textContent=msg
+
+chatbox.appendChild(userDiv)
+
+input.value=""
+
+chatbox.scrollTop=chatbox.scrollHeight
+
+
+// bot bubble
+let botDiv=document.createElement("div")
+botDiv.className="bot"
+botDiv.textContent=""
+
+chatbox.appendChild(botDiv)
+
+try{
+
+let res = await fetch("http://127.0.0.1:8000/chat",{
+
+method:"POST",
+
+headers:{
+"Content-Type":"application/json"
+},
+
+body:JSON.stringify({
+message:msg,
+thread_id:thread_id
+})
+
+})
+
+const reader = res.body.getReader()
+const decoder = new TextDecoder()
+
+while(true){
+
+const {done,value} = await reader.read()
+
+if(done) break
+
+let chunk = decoder.decode(value,{stream:true})
+
+botDiv.textContent += chunk
+
+chatbox.scrollTop = chatbox.scrollHeight
+
+}
+
+}catch(err){
+
+botDiv.textContent = "Server error"
+
+console.error(err)
+
+}
+
+}
+
+
+// -----------------------------
+// Enter key support
+// -----------------------------
+document.getElementById("userInput")
+.addEventListener("keydown",function(e){
+
+if(e.key==="Enter"){
+e.preventDefault()
+sendMessage()
+}
+
+})
+
+
+// -----------------------------
+loadConversations()
