@@ -98,31 +98,44 @@ medical-ai-assistant
 
 ```
 git clone https://github.com/kavya181205/medical-ai-assistant.git
-cd medical-ai-assistant ```
+cd medical-ai-assistant
+```
 2️⃣ Create Virtual Environment
-``` python -m venv venv  ```
+``` 
+python -m venv venv
+ ```
 
 Activate environment
 
 Windows
 
-``` venv\Scripts\activate ```
+``` 
+venv\Scripts\activate
+```
 
 Linux / Mac
 
 source venv/bin/activate
 3️⃣ Install Dependencies
-``` pip install -r requirements.txt ```
+``` 
+pip install -r requirements.txt
+ ```
 ▶️ Run the Application
 
 Start the FastAPI server
 
-``` uvicorn main:app --reload ``` 
+```
+uvicorn main:app --reload
+``` 
 
 Server will start at
 
-``` http://127.0.0.1:8000 ```
+```
+http://127.0.0.1:8000
+ ```
 
 API Docs
 
-``` http://127.0.0.1:8000/docs ```
+```
+http://127.0.0.1:8000/docs
+ ```
