@@ -66,7 +66,6 @@ Chat Interface
 | FastAPI | Backend API framework |
 | NLP | Symptom extraction and query understanding |
 | Machine Learning | Disease prediction |
-| Redis / Database | Conversation storage |
 | JSON Medical Dataset | Symptom-disease mapping |
 
 ---
@@ -90,3 +89,40 @@ medical-ai-assistant
 ├── requirements.txt
 └── README.md
 ```
+
+---
+
+# ⚙️ Installation
+
+## 1️⃣ Clone the Repository
+
+```
+git clone https://github.com/kavya181205/medical-ai-assistant.git
+cd medical-ai-assistant ```
+2️⃣ Create Virtual Environment
+``` python -m venv venv  ```
+
+Activate environment
+
+Windows
+
+``` venv\Scripts\activate ```
+
+Linux / Mac
+
+source venv/bin/activate
+3️⃣ Install Dependencies
+``` pip install -r requirements.txt ```
+▶️ Run the Application
+
+Start the FastAPI server
+
+``` uvicorn main:app --reload ``` 
+
+Server will start at
+
+``` http://127.0.0.1:8000 ```
+
+API Docs
+
+``` http://127.0.0.1:8000/docs ```
