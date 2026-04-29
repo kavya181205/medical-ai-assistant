@@ -219,7 +219,7 @@ __marimo__/
 # Streamlit
 .streamlit/secrets.toml
 
-data/LRAGR
-data/LRSPL
-data/LRWD
-data/combined_openfda.json
+/data/LRAGR
+/data/LRSPL
+/data/LRWD
+/data/combined_openfda.json
