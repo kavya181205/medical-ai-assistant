@@ -10,9 +10,32 @@ from symptom_agent import symptom_agent_detect, predict_disease_api
 from rag_model import knowledge_agent
 
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi import FastAPI, Depends
+from contextlib import asynccontextmanager
+
+from app.util.init_db import create_tables
+from app.routers.auth import authRouter 
+from app.util.protectRoute import get_current_user
+from app.schema.user import UserOutput
+
+@asynccontextmanager
+async def lifespan(app : FastAPI):
+    create_tables()
+    yield 
+
+app = FastAPI(lifespan=lifespan)
+app.include_router(router=authRouter, tags=["auth"], prefix="/auth")
 
 
-app = FastAPI()
+@app.get("/health")
+def health():
+    return {"status" : "Running...."}
+
+@app.get("/protected")
+def read_protected(user : UserOutput = Depends(get_current_user)):
+    return {"data" : user}
+
+
 
 # -----------------------------
 # Session memory
@@ -318,3 +341,6 @@ def get_messages(thread_id: str):
         {"role": r[0], "content": r[1]}
         for r in rows
     ]
+
+
+

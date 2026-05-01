@@ -1,44 +1,214 @@
 <!DOCTYPE html>
-<html>
-    <head>
-        <title>Medical AI Assistant</title>
-        <link rel="stylesheet" href="style.css">
-    </head>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Auth UI</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <body>
+<!-- Google Identity -->
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 
-        <div class="app">
+<style>
+body {
+  margin: 0;
+  font-family: 'Segoe UI', sans-serif;
+  background: linear-gradient(135deg, #4facfe, #00f2fe);
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
 
-           
-            <div class="sidebar">
+.container {
+  width: 800px;
+  height: 500px;
+  background: white;
+  display: flex;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+}
 
-                <button onclick="createNewChat()">+ New Chat</button>
+.left {
+  width: 50%;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: white;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+}
 
-                <div id="history"></div>
+.right {
+  width: 50%;
+  padding: 40px;
+}
 
-            </div>
+input {
+  width: 100%;
+  padding: 10px;
+  margin: 8px 0;
+  border-radius: 6px;
+  border: 1px solid #ddd;
+}
 
-            
-            <div class="chat">
+button {
+  width: 100%;
+  padding: 10px;
+  margin-top: 10px;
+  background: #667eea;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
 
-                <div id="chatbox"></div>
+button:hover {
+  background: #5a67d8;
+}
 
-                <div class="input-area">
+.switch {
+  margin-top: 10px;
+  color: #667eea;
+  cursor: pointer;
+  text-align: center;
+}
 
-                    <input
-                        id="userInput"
-                        placeholder="Type your message..."
-                        autocomplete="off" />
+.google {
+  margin-top: 15px;
+  text-align: center;
+}
+</style>
+</head>
 
-                    <button type="button" onclick="sendMessage()">Send</button>
+<body>
 
-                </div>
+<div class="container">
 
-            </div>
+  <div class="left">
+    <h1 id="leftTitle">Welcome Back!</h1>
+    <p id="leftText">Login to continue your journey</p>
+  </div>
 
-        </div>
+  <div class="right">
+    <h2 id="formTitle">Login</h2>
 
-        <script src="script.js"></script>
+    <input type="text" id="first_name" placeholder="First Name" style="display:none;">
+<input type="text" id="last_name" placeholder="Last Name" style="display:none;">
 
-    </body>
+    <input type="email" id="email" placeholder="Email">
+    <input type="password" id="password" placeholder="Password">
+
+    <button onclick="submitForm()">Submit</button>
+
+    <div class="switch" onclick="toggleMode()">
+      Switch to Signup
+    </div>
+
+    <!-- Google -->
+    <div class="google">
+      <div id="g_id_onload"
+           data-client_id="766510130964-vpvfpfgs2cbn13qhtft6r3orvpnrrds2.apps.googleusercontent.com"
+           data-callback="handleGoogle">
+      </div>
+
+      <div class="g_id_signin"
+           data-type="standard"
+           data-size="large"
+           data-theme="outline">
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+let isLogin = true;
+
+// Toggle Login/Signup
+function toggleMode() {
+  isLogin = !isLogin;
+
+  document.getElementById("formTitle").innerText = isLogin ? "Login" : "Signup";
+  document.getElementById("leftTitle").innerText = isLogin ? "Welcome Back!" : "Hello Friend!";
+  document.getElementById("leftText").innerText = isLogin 
+    ? "Login to continue your journey" 
+    : "Sign up to get started";
+
+  document.getElementById("first_name").style.display = isLogin ? "none" : "block";
+document.getElementById("last_name").style.display = isLogin ? "none" : "block";
+}
+
+// Submit Form
+async function submitForm() {
+  const email = document.getElementById("email").value.trim();
+  const password = document.getElementById("password").value.trim();
+  const first_name = document.getElementById("first_name").value.trim();
+  const last_name = document.getElementById("last_name").value.trim();
+
+  if (!email || !password) {
+    alert("Email and Password are required");
+    return;
+  }
+
+  if (!isLogin && (!first_name || !last_name)) {
+    alert("First and Last name required");
+    return;
+  }
+
+  const url = isLogin 
+    ? "http://127.0.0.1:8000/auth/login" 
+    : "http://127.0.0.1:8000/auth/signup";
+
+  const body = isLogin 
+    ? { email, password }
+    : { email, password, first_name, last_name };
+
+  console.log("Sending:", body);
+
+  const res = await fetch(url, {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify(body)
+  });
+
+  const data = await res.json();
+
+  if (!res.ok) {
+    alert(data.detail?.[0]?.msg || "Error");
+    return;
+  }
+
+  alert("Success");
+}
+
+// Google Login
+async function handleGoogle(response) {
+  const token = response.credential;
+
+  try {
+    const res = await fetch("http://127.0.0.1:8000/auth/google", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({ token })
+    });
+
+    const data = await res.json();
+
+    if (data.access_token) {
+      localStorage.setItem("token", data.access_token);
+      alert("Google Login Success");
+      window.location.href = "/dashboard.html";
+    } else {
+      alert("Google login failed");
+    }
+
+  } catch (err) {
+    alert("Google auth error");
+  }
+}
+</script>
+
+</body>
 </html>
