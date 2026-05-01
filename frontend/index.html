@@ -5,7 +5,6 @@
 <title>Auth UI</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<!-- Google Identity -->
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 
 <style>
@@ -20,8 +19,8 @@ body {
 }
 
 .container {
-  width: 800px;
-  height: 500px;
+  width: 850px;
+  height: 550px;
   background: white;
   display: flex;
   border-radius: 12px;
@@ -79,6 +78,10 @@ button:hover {
   margin-top: 15px;
   text-align: center;
 }
+
+.hidden {
+  display: none;
+}
 </style>
 </head>
 
@@ -94,12 +97,20 @@ button:hover {
   <div class="right">
     <h2 id="formTitle">Login</h2>
 
-    <input type="text" id="first_name" placeholder="First Name" style="display:none;">
-<input type="text" id="last_name" placeholder="Last Name" style="display:none;">
+    <!-- Signup fields -->
+    <input type="text" id="first_name" placeholder="First Name" class="hidden">
+    <input type="text" id="last_name" placeholder="Last Name" class="hidden">
 
+    <!-- Common -->
     <input type="email" id="email" placeholder="Email">
     <input type="password" id="password" placeholder="Password">
 
+    <!-- OTP section -->
+    <button id="sendOtpBtn" class="hidden" onclick="sendOTP()">Send OTP</button>
+    <input type="text" id="otp" placeholder="Enter OTP" class="hidden">
+    <button id="verifyOtpBtn" class="hidden" onclick="verifyOTP()">Verify OTP</button>
+
+    <!-- Submit -->
     <button onclick="submitForm()">Submit</button>
 
     <div class="switch" onclick="toggleMode()">
@@ -109,7 +120,7 @@ button:hover {
     <!-- Google -->
     <div class="google">
       <div id="g_id_onload"
-           data-client_id="766510130964-vpvfpfgs2cbn13qhtft6r3orvpnrrds2.apps.googleusercontent.com"
+           data-client_id="YOUR_GOOGLE_CLIENT_ID"
            data-callback="handleGoogle">
       </div>
 
@@ -125,10 +136,12 @@ button:hover {
 
 <script>
 let isLogin = true;
+let otpVerified = false;
 
 // Toggle Login/Signup
 function toggleMode() {
   isLogin = !isLogin;
+  otpVerified = false;
 
   document.getElementById("formTitle").innerText = isLogin ? "Login" : "Signup";
   document.getElementById("leftTitle").innerText = isLogin ? "Welcome Back!" : "Hello Friend!";
@@ -136,8 +149,56 @@ function toggleMode() {
     ? "Login to continue your journey" 
     : "Sign up to get started";
 
-  document.getElementById("first_name").style.display = isLogin ? "none" : "block";
-document.getElementById("last_name").style.display = isLogin ? "none" : "block";
+  // Toggle fields
+  document.getElementById("first_name").classList.toggle("hidden", isLogin);
+  document.getElementById("last_name").classList.toggle("hidden", isLogin);
+
+  document.getElementById("sendOtpBtn").classList.toggle("hidden", isLogin);
+  document.getElementById("otp").classList.add("hidden");
+  document.getElementById("verifyOtpBtn").classList.add("hidden");
+}
+
+// Send OTP
+async function sendOTP() {
+  const email = document.getElementById("email").value;
+
+  if (!email) {
+    alert("Enter email first");
+    return;
+  }
+
+  const res = await fetch("http://127.0.0.1:8000/auth/send-otp", {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({ email })
+  });
+
+  if (res.ok) {
+    alert("OTP sent to email");
+    document.getElementById("otp").classList.remove("hidden");
+    document.getElementById("verifyOtpBtn").classList.remove("hidden");
+  } else {
+    alert("Failed to send OTP");
+  }
+}
+
+// Verify OTP
+async function verifyOTP() {
+  const email = document.getElementById("email").value;
+  const otp = document.getElementById("otp").value;
+
+  const res = await fetch("http://127.0.0.1:8000/auth/verify-otp", {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({ email, otp })
+  });
+
+  if (res.ok) {
+    alert("OTP Verified ✅");
+    otpVerified = true;
+  } else {
+    alert("Invalid OTP ❌");
+  }
 }
 
 // Submit Form
@@ -148,13 +209,20 @@ async function submitForm() {
   const last_name = document.getElementById("last_name").value.trim();
 
   if (!email || !password) {
-    alert("Email and Password are required");
+    alert("Email and Password required");
     return;
   }
 
-  if (!isLogin && (!first_name || !last_name)) {
-    alert("First and Last name required");
-    return;
+  if (!isLogin) {
+    if (!first_name || !last_name) {
+      alert("Name required");
+      return;
+    }
+
+    if (!otpVerified) {
+      alert("Please verify OTP first");
+      return;
+    }
   }
 
   const url = isLogin 
@@ -165,8 +233,6 @@ async function submitForm() {
     ? { email, password }
     : { email, password, first_name, last_name };
 
-  console.log("Sending:", body);
-
   const res = await fetch(url, {
     method: "POST",
     headers: {"Content-Type": "application/json"},
@@ -176,36 +242,31 @@ async function submitForm() {
   const data = await res.json();
 
   if (!res.ok) {
-    alert(data.detail?.[0]?.msg || "Error");
+    alert(data.detail || "Error");
     return;
   }
 
-  alert("Success");
+  alert("Success 🎉");
 }
 
 // Google Login
 async function handleGoogle(response) {
   const token = response.credential;
 
-  try {
-    const res = await fetch("http://127.0.0.1:8000/auth/google", {
-      method: "POST",
-      headers: {"Content-Type": "application/json"},
-      body: JSON.stringify({ token })
-    });
+  const res = await fetch("http://127.0.0.1:8000/auth/google", {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({ token })
+  });
 
-    const data = await res.json();
+  const data = await res.json();
 
-    if (data.access_token) {
-      localStorage.setItem("token", data.access_token);
-      alert("Google Login Success");
-      window.location.href = "/dashboard.html";
-    } else {
-      alert("Google login failed");
-    }
-
-  } catch (err) {
-    alert("Google auth error");
+  if (data.access_token) {
+    localStorage.setItem("token", data.access_token);
+    alert("Google Login Success");
+    window.location.href = "/dashboard.html";
+  } else {
+    alert("Google login failed");
   }
 }
 </script>
