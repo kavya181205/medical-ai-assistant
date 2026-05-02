@@ -131,14 +131,12 @@ async function submitForm() {
     return;
   }
 
-  // -----------------------------
-  // SAVE TOKEN
-  // -----------------------------
-  if (data.access_token) {
-    localStorage.setItem("token", data.access_token);
-    console.log("TOKEN SAVED:", data.access_token);
-  }
+  const token = data.access_token || data.token;
 
+  if (token) {
+    localStorage.setItem("access_token", token);
+    console.log("TOKEN SAVED:", token);
+  }
   alert("Success 🎉");
 
   setTimeout(() => {
@@ -161,7 +159,7 @@ async function handleGoogle(response) {
   const token = data.access_token || data.token || data.accessToken;
 
   if (token) {
-      localStorage.setItem("token", token);
+      localStorage.setItem("access_token", token);
 
       setTimeout(() => {
           window.location.href = "chat.html";
