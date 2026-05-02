@@ -26,3 +26,4 @@ class UserInLogin(BaseModel):
 
 class UserWithToken(BaseModel):
     token: str
+

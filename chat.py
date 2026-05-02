@@ -1,86 +1,34 @@
 import asyncio
 import uuid
 
-from fastapi import FastAPI, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel
+
+from app.util.protectRoute import get_current_user
+from app.schema.user import UserOutput
+from app.schema.auth import ChatRequest
 
 from database import conn, cursor
 
 from symptom_agent import symptom_agent_detect, predict_disease_api
 from rag_model import knowledge_agent
 
-from fastapi.middleware.cors import CORSMiddleware
-from contextlib import asynccontextmanager
 
-from app.util.init_db import create_tables
-from app.routers.auth import authRouter
-from app.util.protectRoute import get_current_user
-from app.schema.user import UserOutput
+router = APIRouter()
 
 
-# -----------------------------
-# APP INIT
-# -----------------------------
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    create_tables()
-    yield
-
-
-app = FastAPI(lifespan=lifespan)
-app.include_router(router=authRouter, tags=["auth"], prefix="/auth")
-
-
-# -----------------------------
-# CORS
-# -----------------------------
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-
-# -----------------------------
-# SESSION MEMORY (PER USER)
-# -----------------------------
-sessions = {}
-
-
-# -----------------------------
-# REQUEST MODEL
-# -----------------------------
-class ChatRequest(BaseModel):
-    message: str
-    thread_id: str | None = None
-
-
-# -----------------------------
-# HEALTH
-# -----------------------------
-@app.get("/health")
-def health():
-    return {"status": "running"}
-
-
-@app.get("/protected")
-def read_protected(user: UserOutput = Depends(get_current_user)):
-    return {"data": user}
+sessions = {}  
 
 
 # -----------------------------
 # CHAT ENDPOINT
 # -----------------------------
-@app.post("/chat")
+@router.post("/chat")
 async def chat(
     req: ChatRequest,
     user: UserOutput = Depends(get_current_user)
 ):
 
-    # VALIDATION
     if len(req.message) > 500:
         return {"response": "Message too long."}
 
@@ -94,7 +42,7 @@ async def chat(
         )
         conn.commit()
 
-    # VERIFY OWNERSHIP
+    # VERIFY THREAD
     cursor.execute(
         "SELECT user_id FROM conversations WHERE thread_id=%s",
         (req.thread_id,)
@@ -104,7 +52,6 @@ async def chat(
     if not row or row[0] != user.id:
         raise HTTPException(status_code=403, detail="Unauthorized thread")
 
-    # SESSION PER USER
     user_sessions = sessions.setdefault(user.id, {})
 
     session = user_sessions.setdefault(req.thread_id, {
@@ -116,9 +63,7 @@ async def chat(
 
     async def generate():
 
-        # -----------------------------
-        # EDIT MODE
-        # -----------------------------
+        # ===== YOUR FULL LOGIC (UNCHANGED) =====
         if session["edit_mode"]:
 
             if message == "add":
@@ -146,7 +91,6 @@ Type the symptom you want to remove.
                 symptoms = session["symptoms"]
 
                 if sym in symptoms:
-
                     symptoms.remove(sym)
 
                     symptom_text = "\n".join(
@@ -160,7 +104,6 @@ Updated Symptoms:
 
 Are these correct now? (yes/no)
 """
-
                     session["edit_mode"] = False
 
                 else:
@@ -169,9 +112,6 @@ Are these correct now? (yes/no)
 
                     response = f"Added symptom: {message}"
 
-        # -----------------------------
-        # CONFIRM SYMPTOMS
-        # -----------------------------
         elif session["symptoms"]:
 
             if message in ["yes", "y"]:
@@ -179,6 +119,7 @@ Are these correct now? (yes/no)
                 symptoms = session["symptoms"]
 
                 result = predict_disease_api(symptoms)
+
                 predicted = result["predicted_disease"]
 
                 pred_list = "\n".join(
@@ -223,9 +164,6 @@ remove → to remove detected symptoms
             else:
                 response = "Please reply with yes or no."
 
-        # -----------------------------
-        # DETECT SYMPTOMS
-        # -----------------------------
         else:
 
             detect = symptom_agent_detect(req.message)
@@ -253,24 +191,19 @@ Are these correct? (yes/no)
                     "predicted_disease": None
                 })
 
-        # -----------------------------
-        # SAVE CHAT (POSTGRES)
-        # -----------------------------
+        # SAVE CHAT (POSTGRES FIX)
         cursor.execute(
-            "INSERT INTO messages(thread_id, role, content) VALUES (%s, %s, %s)",
+            "INSERT INTO messages(thread_id,role,content) VALUES (%s,%s,%s)",
             (req.thread_id, "user", req.message)
         )
 
         cursor.execute(
-            "INSERT INTO messages(thread_id, role, content) VALUES (%s, %s, %s)",
+            "INSERT INTO messages(thread_id,role,content) VALUES (%s,%s,%s)",
             (req.thread_id, "assistant", response)
         )
 
         conn.commit()
 
-        # -----------------------------
-        # STREAM RESPONSE
-        # -----------------------------
         for word in response.split():
             yield word + " "
             await asyncio.sleep(0.01)
@@ -281,15 +214,15 @@ Are these correct? (yes/no)
 # -----------------------------
 # NEW CHAT
 # -----------------------------
-@app.post("/new_chat")
+@router.post("/new_chat")
 def new_chat(user: UserOutput = Depends(get_current_user)):
 
     thread_id = str(uuid.uuid4())
 
     cursor.execute(
-        "INSERT INTO conversations(thread_id, user_id) VALUES (%s, %s)",
-        (thread_id, user.id)
-    )
+    "INSERT INTO conversations(thread_id, user_id) VALUES (%s, %s)",
+    (thread_id, user.id)
+)
 
     conn.commit()
 
@@ -299,7 +232,7 @@ def new_chat(user: UserOutput = Depends(get_current_user)):
 # -----------------------------
 # GET CONVERSATIONS
 # -----------------------------
-@app.get("/conversations")
+@router.get("/conversations")
 def get_conversations(user: UserOutput = Depends(get_current_user)):
 
     cursor.execute("""
@@ -325,7 +258,7 @@ def get_conversations(user: UserOutput = Depends(get_current_user)):
 # -----------------------------
 # GET MESSAGES
 # -----------------------------
-@app.get("/messages/{thread_id}")
+@router.get("/messages/{thread_id}")
 def get_messages(thread_id: str, user: UserOutput = Depends(get_current_user)):
 
     cursor.execute("""

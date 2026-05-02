@@ -17,41 +17,30 @@ body {
   align-items: center;
   justify-content: center;
 }
-
 .container {
   width: 850px;
   height: 550px;
   background: white;
   display: flex;
   border-radius: 12px;
-  overflow: hidden;
-  box-shadow: 0 20px 40px rgba(0,0,0,0.2);
 }
-
 .left {
   width: 50%;
-  background: linear-gradient(135deg, #667eea, #764ba2);
+  background: #667eea;
   color: white;
   display: flex;
-  flex-direction: column;
-  justify-content: center;
   align-items: center;
-  padding: 20px;
+  justify-content: center;
 }
-
 .right {
   width: 50%;
   padding: 40px;
 }
-
 input {
   width: 100%;
   padding: 10px;
   margin: 8px 0;
-  border-radius: 6px;
-  border: 1px solid #ddd;
 }
-
 button {
   width: 100%;
   padding: 10px;
@@ -59,29 +48,8 @@ button {
   background: #667eea;
   color: white;
   border: none;
-  border-radius: 6px;
-  cursor: pointer;
 }
-
-button:hover {
-  background: #5a67d8;
-}
-
-.switch {
-  margin-top: 10px;
-  color: #667eea;
-  cursor: pointer;
-  text-align: center;
-}
-
-.google {
-  margin-top: 15px;
-  text-align: center;
-}
-
-.hidden {
-  display: none;
-}
+.hidden { display: none; }
 </style>
 </head>
 
@@ -89,147 +57,63 @@ button:hover {
 
 <div class="container">
 
-  <div class="left">
-    <h1 id="leftTitle">Welcome Back!</h1>
-    <p id="leftText">Login to continue your journey</p>
-  </div>
+<div class="left">
+<h1 id="leftTitle">Welcome Back!</h1>
+</div>
 
-  <div class="right">
-    <h2 id="formTitle">Login</h2>
+<div class="right">
 
-    <!-- Signup fields -->
-    <input type="text" id="first_name" placeholder="First Name" class="hidden">
-    <input type="text" id="last_name" placeholder="Last Name" class="hidden">
+<h2 id="formTitle">Login</h2>
 
-    <!-- Common -->
-    <input type="email" id="email" placeholder="Email">
-    <input type="password" id="password" placeholder="Password">
+<input id="first_name" class="hidden" placeholder="First Name">
+<input id="last_name" class="hidden" placeholder="Last Name">
 
-    <!-- OTP section -->
-    <button id="sendOtpBtn" class="hidden" onclick="sendOTP()">Send OTP</button>
-    <input type="text" id="otp" placeholder="Enter OTP" class="hidden">
-    <button id="verifyOtpBtn" class="hidden" onclick="verifyOTP()">Verify OTP</button>
+<input id="email" placeholder="Email">
+<input id="password" type="password" placeholder="Password">
 
-    <!-- Submit -->
-    <button onclick="submitForm()">Submit</button>
+<button onclick="submitForm()">Submit</button>
 
-    <div class="switch" onclick="toggleMode()">
-      Switch to Signup
-    </div>
+<div onclick="toggleMode()" style="cursor:pointer;">
+Switch Mode
+</div>
 
-    <!-- Google -->
-    <div class="google">
-      <div id="g_id_onload"
-           data-client_id="YOUR_GOOGLE_CLIENT_ID"
-           data-callback="handleGoogle">
-      </div>
+<div id="g_id_onload"
+ data-client_id="766510130964-vpvfpfgs2cbn13qhtft6r3orvpnrrds2.apps.googleusercontent.com"
+ data-callback="handleGoogle">
+</div>
 
-      <div class="g_id_signin"
-           data-type="standard"
-           data-size="large"
-           data-theme="outline">
-      </div>
-    </div>
+<div class="g_id_signin"></div>
 
-  </div>
+</div>
 </div>
 
 <script>
-let isLogin = true;
-let otpVerified = false;
 
-// Toggle Login/Signup
+let isLogin = true;
+
+// -----------------------------
 function toggleMode() {
   isLogin = !isLogin;
-  otpVerified = false;
 
   document.getElementById("formTitle").innerText = isLogin ? "Login" : "Signup";
-  document.getElementById("leftTitle").innerText = isLogin ? "Welcome Back!" : "Hello Friend!";
-  document.getElementById("leftText").innerText = isLogin 
-    ? "Login to continue your journey" 
-    : "Sign up to get started";
 
-  // Toggle fields
   document.getElementById("first_name").classList.toggle("hidden", isLogin);
   document.getElementById("last_name").classList.toggle("hidden", isLogin);
-
-  document.getElementById("sendOtpBtn").classList.toggle("hidden", isLogin);
-  document.getElementById("otp").classList.add("hidden");
-  document.getElementById("verifyOtpBtn").classList.add("hidden");
 }
 
-// Send OTP
-async function sendOTP() {
-  const email = document.getElementById("email").value;
-
-  if (!email) {
-    alert("Enter email first");
-    return;
-  }
-
-  const res = await fetch("http://127.0.0.1:8000/auth/send-otp", {
-    method: "POST",
-    headers: {"Content-Type": "application/json"},
-    body: JSON.stringify({ email })
-  });
-
-  if (res.ok) {
-    alert("OTP sent to email");
-    document.getElementById("otp").classList.remove("hidden");
-    document.getElementById("verifyOtpBtn").classList.remove("hidden");
-  } else {
-    alert("Failed to send OTP");
-  }
-}
-
-// Verify OTP
-async function verifyOTP() {
-  const email = document.getElementById("email").value;
-  const otp = document.getElementById("otp").value;
-
-  const res = await fetch("http://127.0.0.1:8000/auth/verify-otp", {
-    method: "POST",
-    headers: {"Content-Type": "application/json"},
-    body: JSON.stringify({ email, otp })
-  });
-
-  if (res.ok) {
-    alert("OTP Verified ✅");
-    otpVerified = true;
-  } else {
-    alert("Invalid OTP ❌");
-  }
-}
-
-// Submit Form
+// -----------------------------
 async function submitForm() {
-  const email = document.getElementById("email").value.trim();
-  const password = document.getElementById("password").value.trim();
-  const first_name = document.getElementById("first_name").value.trim();
-  const last_name = document.getElementById("last_name").value.trim();
 
-  if (!email || !password) {
-    alert("Email and Password required");
-    return;
-  }
+  const email = document.getElementById("email").value;
+  const password = document.getElementById("password").value;
+  const first_name = document.getElementById("first_name").value;
+  const last_name = document.getElementById("last_name").value;
 
-  if (!isLogin) {
-    if (!first_name || !last_name) {
-      alert("Name required");
-      return;
-    }
-
-    if (!otpVerified) {
-      alert("Please verify OTP first");
-      return;
-    }
-  }
-
-  const url = isLogin 
-    ? "http://127.0.0.1:8000/auth/login" 
+  const url = isLogin
+    ? "http://127.0.0.1:8000/auth/login"
     : "http://127.0.0.1:8000/auth/signup";
 
-  const body = isLogin 
+  const body = isLogin
     ? { email, password }
     : { email, password, first_name, last_name };
 
@@ -240,35 +124,54 @@ async function submitForm() {
   });
 
   const data = await res.json();
+  console.log(" LOGIN RESPONSE:", data);
 
   if (!res.ok) {
     alert(data.detail || "Error");
     return;
   }
 
+  // -----------------------------
+  // SAVE TOKEN
+  // -----------------------------
+  if (data.access_token) {
+    localStorage.setItem("token", data.access_token);
+    console.log("TOKEN SAVED:", data.access_token);
+  }
+
   alert("Success 🎉");
+
+  setTimeout(() => {
+    window.location.href = "chat.html";
+  }, 200);
 }
 
-// Google Login
+// -----------------------------
 async function handleGoogle(response) {
-  const token = response.credential;
 
   const res = await fetch("http://127.0.0.1:8000/auth/google", {
     method: "POST",
     headers: {"Content-Type": "application/json"},
-    body: JSON.stringify({ token })
+    body: JSON.stringify({ token: response.credential })
   });
 
   const data = await res.json();
 
-  if (data.access_token) {
-    localStorage.setItem("token", data.access_token);
-    alert("Google Login Success");
-    window.location.href = "/dashboard.html";
+  console.log("GOOGLE RESPONSE:", data);
+  const token = data.access_token || data.token || data.accessToken;
+
+  if (token) {
+      localStorage.setItem("token", token);
+
+      setTimeout(() => {
+          window.location.href = "chat.html";
+      }, 200);
+
   } else {
-    alert("Google login failed");
+      alert("Google login failed");
   }
 }
+
 </script>
 
 </body>
